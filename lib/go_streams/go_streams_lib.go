@@ -11,41 +11,46 @@ type ChannelWriter struct {
 	channel *C.channel_writer_t
 }
 
-type ChannelInfo struct{
-	ChannelId string
+type ChannelInfo struct {
+	ChannelId  string
 	AnnounceId string
 }
 
-type KeyNonce struct{
+type KeyNonce struct {
 	keyNonce *C.key_nonce_t
 }
 
-type RawPacket struct{
+type RawPacket struct {
 	packet *C.raw_packet_t
 }
 
-func NewChannelWriter() *ChannelWriter{
+func NewChannelWriter() *ChannelWriter {
 	var channel = C.new_channel_writer()
 	return &ChannelWriter{channel: channel}
 }
 
-func (ch *ChannelWriter) Open() ChannelInfo{
+func (ch *ChannelWriter) Open() ChannelInfo {
 	var info = C.open_channel_writer(ch.channel)
 	defer C.drop_channel_info(info)
 	return ChannelInfo{ChannelId: C.GoString(info.channel_id), AnnounceId: C.GoString(info.announce_id)}
 }
 
-func (ch *ChannelWriter) SendRawData(packet *RawPacket, keyNonce *KeyNonce) string{
-	var msgid = C.send_raw_data(ch.channel, packet.packet, keyNonce.keyNonce)
-	defer C.drop_str(msgid)
-	return C.GoString(msgid)
+func (ch *ChannelWriter) SendRawData(packet *RawPacket, keyNonce *KeyNonce) string {
+	var kn *C.key_nonce_t = nil
+	if keyNonce != nil {
+		kn = keyNonce.keyNonce
+	}
+
+	var msgId = C.send_raw_data(ch.channel, packet.packet, kn)
+	defer C.drop_str(msgId)
+	return C.GoString(msgId)
 }
 
-func (ch *ChannelWriter) Close(){
+func (ch *ChannelWriter) Close() {
 	C.drop_channel_writer(ch.channel)
 }
 
-func NewRawPacket(pubData, maskData []byte) *RawPacket{
+func NewRawPacket(pubData, maskData []byte) *RawPacket {
 	p_len := C.ulong(len(pubData))
 	m_len := C.ulong(len(maskData))
 	c_pub := (*C.uchar)(unsafe.Pointer(&pubData[0]))
@@ -55,21 +60,21 @@ func NewRawPacket(pubData, maskData []byte) *RawPacket{
 	return &RawPacket{packet: packet}
 }
 
-func (packet *RawPacket) Drop(){
+func (packet *RawPacket) Drop() {
 	C.drop_raw_packet(packet.packet)
 }
 
-func CreateEncryptionKeyNonce(key, nonce string) *KeyNonce{
+func CreateEncryptionKeyNonce(key, nonce string) *KeyNonce {
 	return &KeyNonce{
 		keyNonce: C.create_encryption_key_nonce(C.CString(key), C.CString(nonce)),
 	}
 }
 
-func (keyNonce *KeyNonce) Drop(){
+func (keyNonce *KeyNonce) Drop() {
 	C.drop_key_nonce(keyNonce.keyNonce)
 }
 
-func HashString(str string) string{
+func HashString(str string) string {
 	c_str := C.CString(str)
 	hash := C.hash_string(c_str)
 	defer C.drop_str(hash)

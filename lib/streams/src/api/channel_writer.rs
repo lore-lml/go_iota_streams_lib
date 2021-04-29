@@ -10,7 +10,6 @@ use std::os::raw::c_char;
 pub extern "C" fn new_channel_writer() -> *mut ChannelWriter{
     let author = AuthorBuilder::new().build();
     let channel = ChannelWriter::new(author);
-    println!("Channel created");
     Box::into_raw(Box::new(channel))
 }
 
