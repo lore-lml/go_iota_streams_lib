@@ -5,7 +5,9 @@ package go_streams_lib
 #include "../c_streams.h"
 */
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+)
 
 type ChannelWriter struct {
 	channel *C.channel_writer_t
@@ -29,6 +31,29 @@ func NewChannelWriter() *ChannelWriter {
 	return &ChannelWriter{channel: channel}
 }
 
+func ImportChannelWriterFromFileWithNode(filePath string, psw string, nodeUrl string) *ChannelWriter {
+	cPath := C.CString(filePath)
+	cPsw := C.CString(psw)
+	cNode := C.CString(nodeUrl)
+
+	channel := C.import_channel_from_file(cPath, cPsw, cNode)
+	if channel == nil {
+		return nil
+	}
+	return &ChannelWriter{channel: channel}
+}
+
+func ImportChannelWriterFromFile(filePath string, psw string) *ChannelWriter {
+	cPath := C.CString(filePath)
+	cPsw := C.CString(psw)
+
+	channel := C.import_channel_from_file(cPath, cPsw, nil)
+	if channel == nil {
+		return nil
+	}
+	return &ChannelWriter{channel: channel}
+}
+
 func (ch *ChannelWriter) Open() ChannelInfo {
 	var info = C.open_channel_writer(ch.channel)
 	defer C.drop_channel_info(info)
@@ -48,6 +73,19 @@ func (ch *ChannelWriter) SendRawData(packet *RawPacket, keyNonce *KeyNonce) stri
 
 func (ch *ChannelWriter) Close() {
 	C.drop_channel_writer(ch.channel)
+}
+
+func (ch *ChannelWriter) ExportToFile(filePath string, psw string) bool {
+	cPath := C.CString(filePath)
+	cPsw := C.CString(psw)
+
+	return C.export_channel_to_file(ch.channel, cPath, cPsw) != -1
+}
+
+func (ch *ChannelWriter) ChannelInfo() ChannelInfo {
+	var info = C.channel_info(ch.channel)
+	defer C.drop_channel_info(info)
+	return ChannelInfo{ChannelId: C.GoString(info.channel_id), AnnounceId: C.GoString(info.announce_id)}
 }
 
 func NewRawPacket(pubData, maskData []byte) *RawPacket {
