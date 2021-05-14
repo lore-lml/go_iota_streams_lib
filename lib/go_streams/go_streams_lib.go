@@ -65,6 +65,18 @@ func ImportChannelWriterFromBytes(byteState []byte, psw string) *ChannelWriter {
 	return &ChannelWriter{channel: channel}
 }
 
+func ImportChannelWriterFromTangle(channelId string, announceId string, psw string) *ChannelWriter {
+	cChannelId := C.CString(channelId)
+	cAnnounceId := C.CString(announceId)
+	cPsw := C.CString(psw)
+
+	channel := C.import_channel_from_tangle(cChannelId, cAnnounceId, cPsw, nil)
+	if channel == nil {
+		return nil
+	}
+	return &ChannelWriter{channel: channel}
+}
+
 func (ch *ChannelWriter) Open() ChannelInfo {
 	var info = C.open_channel_writer(ch.channel)
 	defer C.drop_channel_info(info)

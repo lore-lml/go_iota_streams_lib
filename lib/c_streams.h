@@ -31,6 +31,7 @@ extern int export_channel_to_file(channel_writer_t *, char const *file_path, cha
 extern channel_state_t *export_channel_to_bytes(channel_writer_t *, char const *psw);
 extern channel_writer_t *import_channel_from_file(char const *file_path, char const *psw, char const *node_url);
 extern channel_writer_t *import_channel_from_bytes(uint8_t const *byte_state, int len, char const *psw, char const *node_url);
+extern channel_writer_t *import_channel_from_tangle(char const *channel_id, char const *announce_id, char const *psw, char const *node_url);
 extern channel_info_t const *channel_info(channel_writer_t *);
 extern raw_packet_t const *new_raw_packet(uint8_t *pub, uint64_t p_len, uint8_t *mask, uint64_t m_len);
 extern char const *hash_string(char const*);

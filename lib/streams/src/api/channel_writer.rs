@@ -204,6 +204,35 @@ pub unsafe extern "C" fn import_channel_from_bytes(byte_state: *const u8, len: u
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn import_channel_from_tangle(channel_id: *const c_char, announce_id: *const c_char, psw: *const c_char, node_url: *const c_char) -> *mut ChannelWriter{
+    if channel_id == null() || announce_id == null() || psw == null(){
+        return null_mut();
+    }
+
+    let channel_id = CStr::from_ptr(channel_id).to_str();
+    let announce_id = CStr::from_ptr(announce_id).to_str();
+    let psw = CStr::from_ptr(psw).to_str();
+    let node = if node_url == null() {None} else {
+        match CStr::from_ptr(node_url).to_str(){
+            Ok(node) => Some(node),
+            Err(_) => None,
+        }
+    };
+
+    let (channel_id, announce_id, psw) = match (channel_id, announce_id, psw){
+        (Ok(channel_id), Ok(announce_id), Ok(psw)) => (channel_id, announce_id, psw),
+        _ => return null_mut()
+    };
+
+    Runtime::new().unwrap().block_on(async {
+        match ChannelWriter::import_from_tangle(channel_id, announce_id, psw, node, None).await{
+            Ok(ch) => Box::into_raw(Box::new(ch)),
+            Err(_) => null_mut()
+        }
+    })
+}
+
+#[no_mangle]
 pub extern "C" fn channel_info(channel: *mut ChannelWriter) -> *const ChannelInfo{
     if channel == null_mut(){
         return null();
