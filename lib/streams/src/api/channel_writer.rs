@@ -21,26 +21,48 @@ pub extern "C" fn drop_channel_writer(channel: *mut ChannelWriter){
 }
 
 #[no_mangle]
-pub extern "C" fn open_channel_writer(channel: *mut ChannelWriter) -> *const ChannelInfo{
-    unsafe {
-        let ch = match channel.as_mut(){
-            None => return null(),
-            Some(ch) => ch
-        };
+pub unsafe extern "C" fn open_channel_writer(channel: *mut ChannelWriter) -> *const ChannelInfo{
+    let ch = match channel.as_mut(){
+        None => return null(),
+        Some(ch) => ch
+    };
 
-        let res = Runtime::new().unwrap().block_on(async {
-            match ch.open().await{
-                Ok((channel_id, announce_id)) => {
-                    let channel_id = CString::new(channel_id).unwrap().into_raw();
-                    let announce_id = CString::new(announce_id).unwrap().into_raw();
-                    let res = ChannelInfo{channel_id, announce_id};
-                    Box::into_raw(Box::new(res))
-                },
-                Err(_) => null()
-            }
-        });
-        res
-    }
+    Runtime::new().unwrap().block_on(async {
+        match ch.open().await{
+            Ok((channel_id, announce_id)) => {
+                let channel_id = CString::new(channel_id).unwrap().into_raw();
+                let announce_id = CString::new(announce_id).unwrap().into_raw();
+                let res = ChannelInfo{channel_id, announce_id};
+                Box::into_raw(Box::new(res))
+            },
+            Err(_) => null()
+        }
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn open_channel_writer_and_save(channel: *mut ChannelWriter, state_psw: *const c_char) -> *const ChannelInfo{
+    let ch = match channel.as_mut(){
+        None => return null(),
+        Some(ch) => ch
+    };
+
+    let state_psw = match CStr::from_ptr(state_psw).to_str(){
+        Ok(state_psw) => state_psw,
+        Err(_) => return null()
+    };
+
+    Runtime::new().unwrap().block_on(async {
+        match ch.open_and_save(state_psw).await{
+            Ok((channel_id, announce_id, _)) => {
+                let channel_id = CString::new(channel_id).unwrap().into_raw();
+                let announce_id = CString::new(announce_id).unwrap().into_raw();
+                let res = ChannelInfo{channel_id, announce_id};
+                Box::into_raw(Box::new(res))
+            },
+            Err(_) => null()
+        }
+    })
 }
 
 #[no_mangle]

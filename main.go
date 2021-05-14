@@ -15,7 +15,8 @@ type Message struct {
 
 func testSend(filePath string, psw string) []byte {
 	channel := go_streams_lib.NewChannelWriter()
-	var info = channel.Open()
+	// info := channel.Open() // OPEN THE CHANNEL BY SENDING ONLY THE ANNOUNCE
+	info := channel.OpenAndSave(psw) // OPEN THE CHANNEL BY SENDING THE ANNOUNCE AND THEN A FIRST MESSAGE WITH THE STATE
 	defer channel.Close()
 	fmt.Printf("%s:%s\n", info.ChannelId, info.AnnounceId)
 

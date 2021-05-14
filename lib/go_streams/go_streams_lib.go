@@ -71,6 +71,13 @@ func (ch *ChannelWriter) Open() ChannelInfo {
 	return ChannelInfo{ChannelId: C.GoString(info.channel_id), AnnounceId: C.GoString(info.announce_id)}
 }
 
+func (ch *ChannelWriter) OpenAndSave(statePsw string) ChannelInfo {
+	cStatePsw := C.CString(statePsw)
+	var info = C.open_channel_writer_and_save(ch.channel, cStatePsw)
+	defer C.drop_channel_info(info)
+	return ChannelInfo{ChannelId: C.GoString(info.channel_id), AnnounceId: C.GoString(info.announce_id)}
+}
+
 func (ch *ChannelWriter) SendRawData(packet *RawPacket, keyNonce *KeyNonce) string {
 	var kn *C.key_nonce_t = nil
 	if keyNonce != nil {

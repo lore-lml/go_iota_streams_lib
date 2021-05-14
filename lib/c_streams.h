@@ -25,6 +25,7 @@ typedef struct ChannelState{
 
 extern channel_writer_t *new_channel_writer();
 extern channel_info_t const *open_channel_writer(channel_writer_t *);
+extern channel_info_t const *open_channel_writer_and_save(channel_writer_t *, char const *state_psw);
 extern char const *send_raw_data(channel_writer_t *, raw_packet_t const*, key_nonce_t const*);
 extern int export_channel_to_file(channel_writer_t *, char const *file_path, char const *psw);
 extern channel_state_t *export_channel_to_bytes(channel_writer_t *, char const *psw);
