@@ -3,7 +3,7 @@ use iota_streams_lib::user_builders::author_builder::AuthorBuilder;
 use std::ptr::{null, null_mut};
 use tokio::runtime::Runtime;
 use std::ffi::{CString, CStr};
-use crate::api::utils::{ChannelInfo, RawPacket, KeyNonce};
+use crate::api::utils::{ChannelInfo, RawPacket, KeyNonce, ChannelState};
 use std::os::raw::c_char;
 
 #[no_mangle]
@@ -87,17 +87,39 @@ pub extern "C" fn export_channel_to_file(channel: *mut ChannelWriter, file_path:
         let path = CStr::from_ptr(file_path).to_str();
         let psw = CStr::from_ptr(psw).to_str();
 
-        match (path, psw){
+        let (path, psw) = match (path, psw){
             (Ok(path), Ok(psw)) => (path, psw),
             _ => return -1
         };
 
-        let path = path.unwrap();
-        let psw = psw.unwrap();
-
         match ch.export_to_file(psw, path){
             Ok(_) => 1,
             Err(_) => -1
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn export_channel_to_bytes(channel: *mut ChannelWriter, psw: *const c_char) -> *const ChannelState{
+    unsafe {
+        let ch = match channel.as_mut(){
+            None => return null(),
+            Some(ch) => ch,
+        };
+
+        let psw = CStr::from_ptr(psw).to_str();
+
+        let psw = match psw{
+            Ok(psw) => psw,
+            _ => return null()
+        };
+
+        match ch.export_to_bytes(psw){
+            Ok(state) => {
+                let res = ChannelState::new(state);
+                Box::into_raw(Box::new(res))
+            }
+            Err(_) => null()
         }
     }
 }
@@ -122,11 +144,41 @@ pub extern "C" fn import_channel_from_file(file_path: *const c_char, psw: *const
             _ => return null_mut()
         };
 
-        match ChannelWriter::import_from_file(path, psw, node, None){
+        Runtime::new().unwrap().block_on(async {
+            match ChannelWriter::import_from_file(path, psw, node, None).await{
+                Ok(ch) => Box::into_raw(Box::new(ch)),
+                Err(_) => null_mut()
+            }
+        })
+    }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn import_channel_from_bytes(byte_state: *const u8, len: usize, psw: *const c_char, node_url: *const c_char) -> *mut ChannelWriter{
+    if byte_state == null() || psw == null(){
+        return null_mut();
+    }
+
+    let state = std::slice::from_raw_parts(byte_state, len).to_vec();
+    let psw = CStr::from_ptr(psw).to_str();
+    let node = if node_url == null() {None} else {
+        match CStr::from_ptr(node_url).to_str(){
+            Ok(node) => Some(node),
+            Err(_) => None,
+        }
+    };
+
+    let psw = match psw{
+        Ok(psw) => psw,
+        _ => return null_mut()
+    };
+
+    Runtime::new().unwrap().block_on(async {
+        match ChannelWriter::import_from_bytes(&state, psw, node, None).await{
             Ok(ch) => Box::into_raw(Box::new(ch)),
             Err(_) => null_mut()
         }
-    }
+    })
 }
 
 #[no_mangle]

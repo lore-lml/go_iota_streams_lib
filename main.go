@@ -13,7 +13,7 @@ type Message struct {
 	Temperature float32 `json:"temperature"`
 }
 
-func testSend(filePath string, psw string) {
+func testSend(filePath string, psw string) []byte {
 	channel := go_streams_lib.NewChannelWriter()
 	var info = channel.Open()
 	defer channel.Close()
@@ -46,11 +46,47 @@ func testSend(filePath string, psw string) {
 	} else {
 		fmt.Println("... Error during saving state")
 	}
+
+	return channel.ExportToBytes(psw)
 }
 
-func testRestore(filePath string, psw string) {
+func testRestoreFromFile(filePath string, psw string) {
 	fmt.Println("Restoring state ...")
 	channel := go_streams_lib.ImportChannelWriterFromFile(filePath, psw)
+	if channel == nil {
+		fmt.Println("... Failed to restore")
+		return
+	}
+	fmt.Println("... Channel restored")
+	defer channel.Close()
+	info := channel.ChannelInfo()
+	fmt.Printf("%s:%s\n", info.ChannelId, info.AnnounceId)
+
+	keyNonce := go_streams_lib.CreateEncryptionKeyNonce("This is a secret key", "This is a secret nonce")
+	defer keyNonce.Drop()
+	m1 := &Message{
+		DeviceId:    "Device1",
+		OperatorId:  "Operator1",
+		Temperature: 12.3,
+	}
+	m2 := &Message{
+		DeviceId:    "Device1",
+		OperatorId:  "Operator1",
+		Temperature: 12.3,
+	}
+
+	pub, _ := json.Marshal(m1)
+	mask, _ := json.Marshal(m2)
+	packet := go_streams_lib.NewRawPacket(pub, mask)
+	defer packet.Drop()
+
+	msgid := channel.SendRawData(packet, keyNonce)
+	fmt.Println("Msg Sent:", msgid)
+}
+
+func testRestoreFromBytes(byteState []byte, psw string) {
+	fmt.Println("Restoring state ...")
+	channel := go_streams_lib.ImportChannelWriterFromBytes(byteState, psw)
 	if channel == nil {
 		fmt.Println("... Failed to restore")
 		return
@@ -85,6 +121,7 @@ func testRestore(filePath string, psw string) {
 func main() {
 	filePath := "./ch.state"
 	psw := "psw"
-	testSend(filePath, psw)
-	testRestore(filePath, psw)
+	byteState := testSend(filePath, psw)
+	testRestoreFromFile(filePath, psw)
+	testRestoreFromBytes(byteState, psw)
 }

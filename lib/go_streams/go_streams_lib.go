@@ -54,6 +54,17 @@ func ImportChannelWriterFromFile(filePath string, psw string) *ChannelWriter {
 	return &ChannelWriter{channel: channel}
 }
 
+func ImportChannelWriterFromBytes(byteState []byte, psw string) *ChannelWriter {
+	cPsw := C.CString(psw)
+	cByteState := (*C.uchar)(unsafe.Pointer(&byteState[0]))
+	length := C.int(len(byteState))
+	channel := C.import_channel_from_bytes(cByteState, length, cPsw, nil)
+	if channel == nil {
+		return nil
+	}
+	return &ChannelWriter{channel: channel}
+}
+
 func (ch *ChannelWriter) Open() ChannelInfo {
 	var info = C.open_channel_writer(ch.channel)
 	defer C.drop_channel_info(info)
@@ -80,6 +91,14 @@ func (ch *ChannelWriter) ExportToFile(filePath string, psw string) bool {
 	cPsw := C.CString(psw)
 
 	return C.export_channel_to_file(ch.channel, cPath, cPsw) != -1
+}
+
+func (ch *ChannelWriter) ExportToBytes(psw string) []byte {
+	cPsw := C.CString(psw)
+	channelState := C.export_channel_to_bytes(ch.channel, cPsw)
+	defer C.drop_channel_state(channelState)
+	length := channelState.len
+	return C.GoBytes(unsafe.Pointer(channelState.byte_state), length)
 }
 
 func (ch *ChannelWriter) ChannelInfo() ChannelInfo {

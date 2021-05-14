@@ -23,7 +23,12 @@ pub struct RawPacket{
     pub p_len: usize,
     pub masked: *const u8,
     pub m_len: usize
+}
 
+#[repr(C)]
+pub struct ChannelState{
+    pub byte_state: *const u8,
+    pub len: usize,
 }
 
 impl RawPacket{
@@ -39,6 +44,16 @@ impl RawPacket{
             let m = std::slice::from_raw_parts(self.masked, self.m_len);
             m.to_vec()
         }
+    }
+}
+
+impl ChannelState{
+    pub fn new(byte_state: Vec<u8>) -> Self {
+        let mut buf = byte_state.into_boxed_slice();
+        let data = buf.as_mut_ptr();
+        let len = buf.len();
+        std::mem::forget(buf);
+        ChannelState { byte_state: data, len }
     }
 }
 
@@ -90,6 +105,13 @@ pub extern "C" fn drop_key_nonce(kn: *const KeyNonce) {
 pub extern "C" fn drop_raw_packet(packet: *mut RawPacket){
     unsafe {
         Box::from_raw(packet);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn drop_channel_state(state: *mut ChannelState){
+    unsafe {
+        Box::from_raw(state);
     }
 }
 
