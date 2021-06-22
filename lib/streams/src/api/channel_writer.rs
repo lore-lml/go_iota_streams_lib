@@ -1,10 +1,12 @@
-use iota_streams_lib::channel::tangle_channel_writer::ChannelWriter;
-use iota_streams_lib::user_builders::author_builder::AuthorBuilder;
+
 use std::ptr::{null, null_mut};
 use tokio::runtime::Runtime;
 use std::ffi::{CString, CStr};
 use crate::api::utils::{ChannelInfo, RawPacket, KeyNonce, ChannelState};
 use std::os::raw::c_char;
+use iota_streams_lib::channels::ChannelWriter;
+use iota_streams_lib::user_builders::author_builder::AuthorBuilder;
+
 
 #[no_mangle]
 pub extern "C" fn new_channel_writer() -> *mut ChannelWriter{
